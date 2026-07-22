@@ -66,6 +66,11 @@ docker compose -f docker/docker-compose.yml build web --no-cache
 docker compose -f docker/docker-compose.yml up
 ```
 
+or one line after code update
+```bash
+docker compose -f docker/docker-compose.yml up -d --build web
+```
+
 - **Frontend Application**: `http://localhost:3000`
 - **FastAPI Backend**: `http://localhost:8000`
 - **Swagger API Docs**: `http://localhost:8000/docs`
