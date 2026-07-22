@@ -71,6 +71,12 @@ or one line after code update
 docker compose -f docker/docker-compose.yml up -d --build web
 ```
 
+or docker-compose-hub.yml
+
+```bash
+docker compose -f docker-compose.hub.yml up -d
+```
+
 - **Frontend Application**: `http://localhost:3000`
 - **FastAPI Backend**: `http://localhost:8000`
 - **Swagger API Docs**: `http://localhost:8000/docs`

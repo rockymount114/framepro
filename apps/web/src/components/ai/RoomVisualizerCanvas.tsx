@@ -9,7 +9,7 @@ export const RoomVisualizerCanvas = () => {
   const [frameSku, setFrameSku] = useState("FP-2201-WAL");
   const [placementX, setPlacementX] = useState(50);
   const [placementY, setPlacementY] = useState(38);
-  const [scalePct, setScalePct] = useState(32);
+  const [scalePct, setScalePct] = useState(20);
   const [processing, setProcessing] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
 
