@@ -147,6 +147,12 @@ containers ──< container_items >── order_items
 | cost_cents | integer, nullable | for internal cost tracking |
 | retention_expires_at | timestamptz | for cleanup of ephemeral job data |
 
+### `ai_chat_sessions` & `ai_chat_messages` (AI Consultant History)
+| Table | Columns | Notes |
+|---|---|---|
+| `ai_chat_sessions` | `id` (PK), `user_id` (FK → users.id, nullable), `session_title`, `created_at`, `updated_at` | Tracks AI Consultant chat threads |
+| `ai_chat_messages` | `id` (PK), `session_id` (FK → ai_chat_sessions.id), `sender` (`user`/`assistant`), `content`, `suggested_skus` (jsonb), `created_at` | Full message transcript for user & staff audit |
+
 ### `warehouses`, `inventory_levels`
 Standard warehouse/stock tracking: `warehouses(id, name, country, region)`, `inventory_levels(id, warehouse_id, frame_profile_id, quantity_on_hand, quantity_reserved, updated_at)`.
 

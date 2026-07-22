@@ -3,11 +3,12 @@ import io
 from PIL import Image
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
-from packages.database.repositories import AIJobRepository, FrameProfileRepository
+from packages.database.repositories import AIJobRepository, FrameProfileRepository, AIChatRepository
 from packages.shared.schemas import (
     AIFramePreviewRequest, AIRoomVisualizerRequest, AIJobStatusResponse,
-    AIRecommendRequest, AIChatRequest
+    AIRecommendRequest, AIChatRequest, AIChatResponse
 )
+from packages.config.settings import settings
 from packages.ai.compositor import FrameCompositor
 from packages.ai.wall_detection import RoomWallDetector
 from packages.ai.recommender import AIFrameRecommender
@@ -113,6 +114,71 @@ async def recommend_frames(req: AIRecommendRequest):
         color_palette=req.color_palette
     )
 
-@router.post("/chat")
-async def sales_assistant_chat(req: AIChatRequest):
-    return LLMAssistant.chat(user_message=req.message)
+@router.post("/chat", response_model=AIChatResponse)
+async def sales_assistant_chat(
+    req: AIChatRequest,
+    session: AsyncSession = Depends(get_db),
+    user = Depends(get_current_user)
+):
+    chat_repo = AIChatRepository(session)
+    session_id = req.session_id or req.conversation_id
+    
+    # 1. Get or create session
+    chat_session = None
+    if session_id:
+        chat_session = await chat_repo.get_session(session_id)
+    
+    if not chat_session:
+        chat_session = await chat_repo.create_session(
+            user_id=user.id if user else None,
+            session_title=req.message[:50]
+        )
+        session_id = chat_session.id
+
+    # 2. Check MAX_AI_CHAT limit
+    user_msg_count = await chat_repo.count_user_messages(session_id)
+    if settings.MAX_AI_CHAT > 0 and user_msg_count >= settings.MAX_AI_CHAT:
+        limit_reply = (
+            f"You have reached the limit of {settings.MAX_AI_CHAT} messages for this session. "
+            "Our sales team will be happy to assist you directly! Please request a quote or contact staff."
+        )
+        await chat_repo.add_message(session_id, sender="user", content=req.message)
+        await chat_repo.add_message(session_id, sender="assistant", content=limit_reply)
+        await session.commit()
+        return AIChatResponse(
+            session_id=session_id,
+            reply=limit_reply,
+            suggested_skus=["FP-2201-WAL"],
+            escalate_to_crm=True,
+            message_count=user_msg_count + 1
+        )
+
+    # 3. Retrieve past messages for history
+    past_messages = await chat_repo.get_session_messages(session_id)
+    history = [
+        {"sender": m.sender, "content": m.content}
+        for m in past_messages
+    ]
+
+    # 4. Save user message to database
+    await chat_repo.add_message(session_id, sender="user", content=req.message)
+
+    # 5. Call DeepSeek LLM assistant
+    ai_result = LLMAssistant.chat(user_message=req.message, history=history)
+
+    # 6. Save assistant reply to database
+    await chat_repo.add_message(
+        session_id=session_id,
+        sender="assistant",
+        content=ai_result["reply"],
+        suggested_skus=ai_result.get("suggested_skus")
+    )
+    await session.commit()
+
+    return AIChatResponse(
+        session_id=session_id,
+        reply=ai_result["reply"],
+        suggested_skus=ai_result.get("suggested_skus", []),
+        escalate_to_crm=ai_result.get("escalate_to_crm", False),
+        message_count=user_msg_count + 1
+    )

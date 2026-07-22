@@ -55,26 +55,32 @@ FramePro is a production-ready, monorepo-based SaaS and B2B platform designed fo
 
 ### Option 1: Running with Docker Compose (Recommended)
 
-To launch the complete platform (FastAPI backend, Next.js frontend, and Redis) with a single command:
+To launch the complete platform (FastAPI backend, Next.js frontend, and Redis) with Docker Compose:
 
+**Build services:**
 ```bash
-docker compose -f docker/docker-compose.yml up --build
+docker compose -f docker/docker-compose.yml build
 ```
-or build first
+
+**Start services in background:**
+```bash
+docker compose -f docker/docker-compose.yml up -d
+```
+
+**Build and start in one command:**
+```bash
+docker compose -f docker/docker-compose.yml up -d --build
+```
+
+**Rebuild a single service after code updates:**
 ```bash
 docker compose -f docker/docker-compose.yml build web --no-cache
-docker compose -f docker/docker-compose.yml up
-```
-
-or one line after code update
-```bash
 docker compose -f docker/docker-compose.yml up -d --build web
 ```
 
-or docker-compose-hub.yml
-
+**Running with Docker Hub Compose:**
 ```bash
-docker compose -f docker-compose.hub.yml up -d
+docker compose -f docker/docker-compose.hub.yml up -d
 ```
 
 - **Frontend Application**: `http://localhost:3000`

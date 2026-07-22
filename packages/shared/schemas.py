@@ -104,7 +104,30 @@ class AIRecommendRequest(BaseModel):
 
 class AIChatRequest(BaseModel):
     message: str
+    session_id: Optional[str] = None
     conversation_id: Optional[str] = None
+
+class AIChatResponse(BaseModel):
+    session_id: str
+    reply: str
+    suggested_skus: Optional[List[str]] = None
+    escalate_to_crm: bool = False
+    message_count: int = 1
+
+class AIChatMessageOut(BaseModel):
+    id: str
+    sender: str
+    content: str
+    suggested_skus: Optional[List[str]] = None
+    created_at: datetime
+
+class AIChatSessionOut(BaseModel):
+    id: str
+    user_id: Optional[str] = None
+    session_title: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    message_count: int = 0
 
 # Quotation Schemas
 class QuotationItemCreate(BaseModel):

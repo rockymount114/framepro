@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from packages.database.models import (
     FrameProfile, FrameImage, Lead, ProductViewDaily, AdminAuditLog, Permission, RolePermission, User
 )
-from packages.database.repositories import UserRepository
+from packages.database.repositories import UserRepository, AIChatRepository
 
 class AdminService:
     def __init__(self, session: AsyncSession):
@@ -392,3 +392,53 @@ class AdminService:
             diff={"email": user.email}
         )
         return True
+
+    # --- AI Chat Log Review ---
+    async def list_ai_chat_sessions(self, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+        repo = AIChatRepository(self.session)
+        user_repo = UserRepository(self.session)
+        sessions = await repo.list_sessions(limit=limit, offset=offset)
+
+        items = []
+        for s in sessions:
+            msg_count = len(s.messages) if s.messages else 0
+            user_info = None
+            if s.user_id:
+                u = await user_repo.get_by_id(s.user_id)
+                if u:
+                    user_info = {"email": u.email, "full_name": u.full_name, "role": u.role}
+
+            items.append({
+                "id": s.id,
+                "user_id": s.user_id,
+                "user": user_info,
+                "session_title": s.session_title or "AI Consultant Session",
+                "message_count": msg_count,
+                "created_at": s.created_at.isoformat() if s.created_at else None,
+                "updated_at": s.updated_at.isoformat() if s.updated_at else None
+            })
+        return items
+
+    async def get_ai_chat_session_detail(self, session_id: str) -> Optional[Dict[str, Any]]:
+        repo = AIChatRepository(self.session)
+        session = await repo.get_session(session_id)
+        if not session:
+            return None
+
+        messages = await repo.get_session_messages(session_id)
+        return {
+            "id": session.id,
+            "user_id": session.user_id,
+            "session_title": session.session_title,
+            "created_at": session.created_at.isoformat() if session.created_at else None,
+            "messages": [
+                {
+                    "id": m.id,
+                    "sender": m.sender,
+                    "content": m.content,
+                    "suggested_skus": m.suggested_skus,
+                    "created_at": m.created_at.isoformat() if m.created_at else None
+                }
+                for m in messages
+            ]
+        }

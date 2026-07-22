@@ -180,6 +180,8 @@ AI endpoints are rate-limited per user and per IP to control cost (see `DEPLOYME
 | POST | `/admin/users` | `users:write` | Create a new user or staff member with role |
 | PATCH | `/admin/users/{user_id}` | `users:write` | Update user details or transition user role |
 | DELETE | `/admin/users/{user_id}` | `users:write` | Soft delete user account |
+| GET | `/admin/ai-chats` | `crm:read` | List AI consultant chat sessions for staff/admin audit |
+| GET | `/admin/ai-chats/{session_id}` | `crm:read` | View full AI chat transcript for staff/admin audit |
 
 ---
 

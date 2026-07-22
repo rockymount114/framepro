@@ -313,3 +313,25 @@ async def delete_admin_user(
         return {"status": "deleted", "id": user_id}
     except ValueError as e:
         raise HTTPException(status_code=400, detail={"code": "BAD_REQUEST", "message": str(e)})
+
+# --- AI Consultant Chat Logs Review (RBAC) ---
+@router.get("/ai-chats", dependencies=[Depends(require_permission("crm:read"))])
+async def list_ai_chat_sessions(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    session: AsyncSession = Depends(get_db)
+):
+    srv = AdminService(session)
+    sessions = await srv.list_ai_chat_sessions(limit=limit, offset=offset)
+    return {"items": sessions}
+
+@router.get("/ai-chats/{session_id}", dependencies=[Depends(require_permission("crm:read"))])
+async def get_ai_chat_session_detail(
+    session_id: str,
+    session: AsyncSession = Depends(get_db)
+):
+    srv = AdminService(session)
+    detail = await srv.get_ai_chat_session_detail(session_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "AI Chat session not found"})
+    return detail

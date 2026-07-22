@@ -13,6 +13,7 @@ export const AIAssistantWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       sender: "bot",
@@ -28,13 +29,20 @@ export const AIAssistantWidget = () => {
     setLoading(true);
 
     try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("framepro_admin_token") : null;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
       const res = await fetch("http://localhost:8000/v1/ai/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMsg })
+        headers,
+        body: JSON.stringify({ message: userMsg, session_id: sessionId })
       });
       if (res.ok) {
         const data = await res.json();
+        if (data.session_id) {
+          setSessionId(data.session_id);
+        }
         setMessages((prev) => [
           ...prev,
           { sender: "bot", text: data.reply, skus: data.suggested_skus }

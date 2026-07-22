@@ -30,10 +30,13 @@ class Settings(BaseSettings):
     R2_ACCESS_KEY_ID: str = ""
     R2_SECRET_ACCESS_KEY: str = ""
 
-    # AI API Keys
+    # AI API Keys & Chat Limits
     GEMINI_API_KEY: str = "mock_gemini_key"
     OPENAI_API_KEY: str = "mock_openai_key"
     CLAUDE_API_KEY: str = "mock_claude_key"
+    DEEPSEEK_API_KEY: str = ""
+    DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
+    MAX_AI_CHAT: int = 10
 
     model_config = SettingsConfigDict(
         env_file=(str(ENV_FILE), ".env"),

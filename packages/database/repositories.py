@@ -3,7 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from packages.database.models import (
     User, DistributorProfile, FrameProfile, Order, OrderItem,
-    Quotation, QuotationItem, AIJob, Warehouse, InventoryLevel, Lead
+    Quotation, QuotationItem, AIJob, Warehouse, InventoryLevel, Lead,
+    AIChatSession, AIChatMessage
 )
 
 class BaseRepository:
@@ -156,5 +157,64 @@ class CRMRepository(BaseRepository):
 
     async def list_leads(self) -> List[Lead]:
         stmt = select(Lead).order_by(Lead.created_at.desc())
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+class AIChatRepository(BaseRepository):
+    async def create_session(self, user_id: Optional[str] = None, session_title: Optional[str] = None) -> AIChatSession:
+        chat_session = AIChatSession(user_id=user_id, session_title=session_title)
+        self.session.add(chat_session)
+        await self.session.flush()
+        return chat_session
+
+    async def get_session(self, session_id: str) -> Optional[AIChatSession]:
+        stmt = select(AIChatSession).where(AIChatSession.id == session_id)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def add_message(
+        self,
+        session_id: str,
+        sender: str,
+        content: str,
+        suggested_skus: Optional[List[str]] = None
+    ) -> AIChatMessage:
+        msg = AIChatMessage(
+            session_id=session_id,
+            sender=sender,
+            content=content,
+            suggested_skus=suggested_skus
+        )
+        self.session.add(msg)
+        await self.session.flush()
+        return msg
+
+    async def get_session_messages(self, session_id: str) -> List[AIChatMessage]:
+        stmt = (
+            select(AIChatMessage)
+            .where(AIChatMessage.session_id == session_id)
+            .order_by(AIChatMessage.created_at.asc())
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def count_user_messages(self, session_id: str) -> int:
+        from sqlalchemy import func
+        stmt = (
+            select(func.count(AIChatMessage.id))
+            .where(AIChatMessage.session_id == session_id, AIChatMessage.sender == "user")
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar() or 0
+
+    async def list_sessions(self, limit: int = 50, offset: int = 0) -> List[AIChatSession]:
+        from sqlalchemy.orm import selectinload
+        stmt = (
+            select(AIChatSession)
+            .options(selectinload(AIChatSession.messages))
+            .order_by(AIChatSession.updated_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())

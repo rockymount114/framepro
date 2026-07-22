@@ -1,9 +1,11 @@
-from typing import Dict, Any, List
+import httpx
+from typing import Dict, Any, List, Optional
+from packages.config.settings import settings
 
 class LLMAssistant:
     """
-    Provider-agnostic interface for AI Sales Assistant chatbot and natural language product search.
-    Follows AI_PIPELINE.md & CLAUDE.md guidelines (graceful fallbacks, token logging, non-fabrication).
+    Provider-agnostic interface for AI Sales Assistant chatbot powered by DeepSeek API with graceful fallback.
+    Follows AI_PIPELINE.md & CLAUDE.md guidelines.
     """
 
     SYSTEM_PROMPT = (
@@ -14,9 +16,50 @@ class LLMAssistant:
     )
 
     @classmethod
-    def chat(cls, user_message: str, history: List[Dict[str, str]] = None) -> Dict[str, Any]:
-        msg_lower = user_message.lower()
+    def chat(cls, user_message: str, history: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
+        api_key = settings.DEEPSEEK_API_KEY
         
+        # 1. Attempt DeepSeek API Call if key is set
+        if api_key and api_key.startswith("sk-"):
+            try:
+                base_url = settings.DEEPSEEK_BASE_URL.rstrip("/")
+                endpoint = f"{base_url}/chat/completions"
+                
+                messages = [{"role": "system", "content": cls.SYSTEM_PROMPT}]
+                if history:
+                    for h in history:
+                        role = "user" if h.get("sender") == "user" else "assistant"
+                        messages.append({"role": role, "content": h.get("content", "")})
+                messages.append({"role": "user", "content": user_message})
+
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                }
+                payload = {
+                    "model": "deepseek-chat",
+                    "messages": messages,
+                    "temperature": 0.7,
+                    "max_tokens": 600
+                }
+
+                with httpx.Client(timeout=12.0) as client:
+                    resp = client.post(endpoint, json=payload, headers=headers)
+                    if resp.status_code == 200:
+                        res_data = resp.json()
+                        reply = res_data["choices"][0]["message"]["content"].strip()
+                        suggested_skus = cls._extract_skus(reply, user_message)
+                        escalate = "quote" in user_message.lower() or "bulk" in user_message.lower() or "distributor" in user_message.lower()
+                        return {
+                            "reply": reply,
+                            "suggested_skus": suggested_skus,
+                            "escalate_to_crm": escalate
+                        }
+            except Exception as err:
+                print(f"[LLMAssistant] DeepSeek API call fallback due to: {err}")
+
+        # 2. Rule-based Fallback
+        msg_lower = user_message.lower()
         if "wholesale" in msg_lower or "distributor" in msg_lower or "moq" in msg_lower:
             reply = (
                 "FramePro offers direct wholesale pricing for registered distributors! "
@@ -48,6 +91,14 @@ class LLMAssistant:
             "suggested_skus": suggested_skus,
             "escalate_to_crm": "quote" in msg_lower or "bulk" in msg_lower
         }
+
+    @classmethod
+    def _extract_skus(cls, reply: str, query: str) -> List[str]:
+        skus = []
+        for sku in ["FP-2201-WAL", "FP-1042-BLK", "FP-3088-GLD"]:
+            if sku in reply or sku in query.upper():
+                skus.append(sku)
+        return skus if skus else ["FP-2201-WAL", "FP-1042-BLK"]
 
     @classmethod
     def natural_language_search(cls, query: str) -> List[str]:

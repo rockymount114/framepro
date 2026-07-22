@@ -205,6 +205,30 @@ class AIJob(Base):
 
     user: Mapped[Optional["User"]] = relationship("User", back_populates="ai_jobs")
 
+class AIChatSession(Base):
+    __tablename__ = "ai_chat_sessions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("users.id"), nullable=True, index=True)
+    session_title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+    messages: Mapped[List["AIChatMessage"]] = relationship("AIChatMessage", back_populates="session", cascade="all, delete-orphan", order_by="AIChatMessage.created_at")
+    user: Mapped[Optional["User"]] = relationship("User")
+
+class AIChatMessage(Base):
+    __tablename__ = "ai_chat_messages"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    session_id: Mapped[str] = mapped_column(String(36), ForeignKey("ai_chat_sessions.id"), nullable=False, index=True)
+    sender: Mapped[str] = mapped_column(String(20), nullable=False)  # "user" or "assistant"
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    suggested_skus: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
+    session: Mapped["AIChatSession"] = relationship("AIChatSession", back_populates="messages")
+
 class Warehouse(Base):
     __tablename__ = "warehouses"
 

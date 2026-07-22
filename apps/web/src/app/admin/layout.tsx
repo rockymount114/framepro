@@ -16,6 +16,7 @@ const navItems: NavItem[] = [
   { name: "Users & Staff", href: "/admin/users", icon: "👥", badge: "RBAC" },
   { name: "Products & Catalog", href: "/admin/products", icon: "🖼️", badge: "Bulk CSV" },
   { name: "CRM & Leads", href: "/admin/crm", icon: "💼", badge: "Kanban" },
+  { name: "AI Chat Logs", href: "/admin/ai-chats", icon: "💬", badge: "History" },
   { name: "View Analytics", href: "/admin/analytics", icon: "📈" },
   { name: "Audit Logs", href: "/admin/audit-log", icon: "🛡️" },
 ];
