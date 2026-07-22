@@ -12,6 +12,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -27,6 +30,7 @@ jobs:
           context: .
           file: ./docker/Dockerfile.api
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: |
             zjxteusa/framepro-api:latest
             zjxteusa/framepro-api:${{ github.sha }}
@@ -39,6 +43,7 @@ jobs:
           context: .
           file: ./docker/Dockerfile.web
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: |
             zjxteusa/framepro-web:latest
             zjxteusa/framepro-web:${{ github.sha }}

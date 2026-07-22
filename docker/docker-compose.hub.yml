@@ -13,8 +13,6 @@ services:
     image: zjxteusa/framepro-web:latest
     ports:
       - "3000:3000"
-    env_file:
-      - ../.env
     environment:
       - NEXT_PUBLIC_API_URL=http://api:8000
       - NEXT_PUBLIC_API_URL_BROWSER=http://localhost:8000
