@@ -3,7 +3,9 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Filter, Layers, ArrowRight, Check, Eye } from "lucide-react";
+import { Filter, Layers, ArrowRight, Eye, ShoppingBag } from "lucide-react";
+import { useCart } from "@/components/cart/CartContext";
+import { useToast } from "@/components/ui/Toast";
 
 const PRODUCTS = [
   {
@@ -48,11 +50,30 @@ const PRODUCTS = [
 ];
 
 export default function CatalogPage() {
+  const { addToCart } = useCart();
+  const { showToast } = useToast();
   const [selectedColor, setSelectedColor] = useState<string>("all");
 
   const filteredProducts = selectedColor === "all"
     ? PRODUCTS
     : PRODUCTS.filter((p) => p.color.toLowerCase().includes(selectedColor));
+
+  const handleAddToCart = (p: typeof PRODUCTS[0]) => {
+    addToCart({
+      sku: p.sku,
+      name: p.name,
+      material: p.material,
+      finish: p.finish,
+      color: p.color,
+      width_mm: p.width_mm,
+      depth_mm: p.depth_mm,
+      moq: p.moq,
+      unit_price: p.wholesale_price,
+      img: p.img
+    }, p.moq);
+
+    showToast("Added to Cart 🛒", `Added ${p.moq}m of ${p.sku} to your cart`, "success");
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
@@ -126,19 +147,28 @@ export default function CatalogPage() {
               </div>
             </div>
 
-            <div className="p-6 pt-0 flex gap-3">
-              <Link
-                href={`/ai-preview?sku=${p.sku}`}
-                className="flex-1 py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+            <div className="p-6 pt-0 flex flex-col gap-2.5">
+              <button
+                onClick={() => handleAddToCart(p)}
+                className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/20 transition-all"
               >
-                <Eye className="w-3.5 h-3.5" /> AI Preview
-              </Link>
-              <Link
-                href="/quotations"
-                className="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
-              >
-                Quote <ArrowRight className="w-3 h-3" />
-              </Link>
+                <ShoppingBag className="w-3.5 h-3.5" /> Add {p.moq}m to Cart
+              </button>
+
+              <div className="flex gap-2">
+                <Link
+                  href={`/ai-preview?sku=${p.sku}`}
+                  className="flex-1 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
+                >
+                  <Eye className="w-3.5 h-3.5" /> AI Preview
+                </Link>
+                <Link
+                  href="/quotations"
+                  className="flex-1 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
+                >
+                  Quote <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
             </div>
           </div>
         ))}

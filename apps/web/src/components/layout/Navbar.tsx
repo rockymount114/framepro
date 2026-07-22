@@ -1,10 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
+
 import { Sparkles, ShoppingBag, FileText, Layers, Eye, ShieldCheck } from "lucide-react";
+import { useCart } from "@/components/cart/CartContext";
+
+
 
 export const Navbar = () => {
+  const { cart } = useCart();
+  const cartItemCount = cart.length;
+
   return (
     <header className="sticky top-0 z-50 w-full glass-panel border-b border-amber-500/10 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
@@ -55,10 +62,13 @@ export const Navbar = () => {
             aria-label="View Cart"
           >
             <ShoppingBag className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-slate-950 text-[10px] font-bold flex items-center justify-center">
-              2
-            </span>
+            {cartItemCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-slate-950 text-[10px] font-bold flex items-center justify-center shadow-lg shadow-amber-500/30">
+                {cartItemCount}
+              </span>
+            )}
           </Link>
+
 
           <Link
             href="/contact"
