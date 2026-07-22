@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useToast } from "@/components/ui/Toast";
 
 interface Product {
   sku: string;
@@ -16,7 +17,6 @@ interface Product {
   wholesale_price_cents: number;
 }
 
-
 const initialProducts: Product[] = [
   { sku: "FP-GOLD-804", name: "Luxury Gold Baroque Frame Profile", material: "PS Composite", finish: "Foil Stamping", color: "Antique Gold", width_mm: 45, depth_mm: 25, moq: 100, retail_price_cents: 3500, wholesale_price_cents: 1800 },
   { sku: "FP-BLK-201", name: "Modern Minimalist Matte Black Profile", material: "Recycled PS", finish: "Matte", color: "Black", width_mm: 30, depth_mm: 20, moq: 200, retail_price_cents: 1800, wholesale_price_cents: 950 },
@@ -25,17 +25,20 @@ const initialProducts: Product[] = [
 ];
 
 export default function AdminProductsPage() {
+  const { showToast } = useToast();
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [search, setSearch] = useState("");
   const [showImportModal, setShowImportModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deletingSku, setDeletingSku] = useState<string | null>(null);
+
   // CSV Import State
   const [csvRaw, setCsvRaw] = useState("");
   const [previewData, setPreviewData] = useState<any | null>(null);
 
   // New Product Form State
-  const [newProduct, setNewProduct] = useState({
+  const [newProduct, setNewProduct] = useState<Product>({
     sku: "",
     name: "",
     material: "PS Composite",
@@ -56,7 +59,10 @@ export default function AdminProductsPage() {
   );
 
   const handleSimulateCSVPreview = () => {
-    if (!csvRaw.trim()) return;
+    if (!csvRaw.trim()) {
+      showToast("Input Required", "Please paste CSV content to generate diff preview", "warning");
+      return;
+    }
     const lines = csvRaw.trim().split("\n");
     const creates: any[] = [];
     const updates: any[] = [];
@@ -79,6 +85,7 @@ export default function AdminProductsPage() {
       creates,
       updates,
     });
+    showToast("Diff Preview Ready", `Found ${creates.length} new profiles and ${updates.length} updates`, "info");
   };
 
   const handleCommitImport = () => {
@@ -100,16 +107,40 @@ export default function AdminProductsPage() {
     });
     setProducts(newItems);
     setShowImportModal(false);
+    showToast(
+      "CSV Import Committed",
+      `Successfully imported ${previewData.summary.creates_count} new profile(s) into catalog!`,
+      "success"
+    );
     setPreviewData(null);
     setCsvRaw("");
-    alert(`Successfully committed ${previewData.summary.creates_count} new profile(s)!`);
   };
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newProduct.sku.trim() || !newProduct.name.trim()) {
+      showToast("Validation Error", "SKU and Name are required", "error");
+      return;
+    }
     setProducts([newProduct, ...products]);
     setShowCreateModal(false);
+    showToast("Product Created", `Profile ${newProduct.sku} created successfully!`, "success");
     setNewProduct({ sku: "", name: "", material: "PS Composite", finish: "Matte", color: "Black", width_mm: 30, depth_mm: 20, moq: 100, retail_price_cents: 2000, wholesale_price_cents: 1000 });
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+    setProducts(products.map((p) => (p.sku === editingProduct.sku ? editingProduct : p)));
+    showToast("Product Updated", `Profile ${editingProduct.sku} saved successfully!`, "success");
+    setEditingProduct(null);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deletingSku) return;
+    setProducts(products.filter((p) => p.sku !== deletingSku));
+    showToast("Product Deleted", `Profile ${deletingSku} soft deleted from catalog.`, "warning");
+    setDeletingSku(null);
   };
 
   return (
@@ -132,6 +163,7 @@ export default function AdminProductsPage() {
           <a
             href="/v1/admin/products/export"
             download="framepro_catalog.csv"
+            onClick={() => showToast("Exporting Catalog", "Downloading framepro_catalog.csv...", "info")}
             className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5"
           >
             <span>📤</span> Export CSV
@@ -210,10 +242,16 @@ export default function AdminProductsPage() {
                   </td>
                   <td className="py-3.5 px-4 text-center space-x-2">
                     <button
-                      onClick={() => alert(`Edit ${p.sku}`)}
-                      className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px]"
+                      onClick={() => setEditingProduct({ ...p })}
+                      className="px-2.5 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[11px] font-semibold transition"
                     >
-                      Edit
+                      ✏️ Edit
+                    </button>
+                    <button
+                      onClick={() => setDeletingSku(p.sku)}
+                      className="px-2 py-1 rounded bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-[11px] transition"
+                    >
+                      🗑️
                     </button>
                   </td>
                 </tr>
@@ -222,6 +260,171 @@ export default function AdminProductsPage() {
           </table>
         </div>
       </div>
+
+      {/* Edit Product Modal */}
+      {editingProduct && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <form onSubmit={handleEditSubmit} className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span>✏️</span> Edit Moulding Profile
+                </h2>
+                <p className="text-xs text-amber-400 font-mono">{editingProduct.sku}</p>
+              </div>
+              <button type="button" onClick={() => setEditingProduct(null)} className="text-slate-400 hover:text-white">
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="col-span-2">
+                <label className="block text-slate-400 font-medium mb-1">Profile Name</label>
+                <input
+                  required
+                  type="text"
+                  value={editingProduct.name}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-medium mb-1">Material</label>
+                <input
+                  type="text"
+                  value={editingProduct.material}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, material: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-medium mb-1">Finish</label>
+                <input
+                  type="text"
+                  value={editingProduct.finish}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, finish: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-medium mb-1">Color</label>
+                <input
+                  type="text"
+                  value={editingProduct.color}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, color: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-medium mb-1">MOQ (meters)</label>
+                <input
+                  type="number"
+                  value={editingProduct.moq}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, moq: parseInt(e.target.value) || 0 })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-medium mb-1">Width (mm)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={editingProduct.width_mm}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, width_mm: parseFloat(e.target.value) || 0 })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-medium mb-1">Depth (mm)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={editingProduct.depth_mm}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, depth_mm: parseFloat(e.target.value) || 0 })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-medium mb-1">Wholesale Price (cents)</label>
+                <input
+                  type="number"
+                  value={editingProduct.wholesale_price_cents}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, wholesale_price_cents: parseInt(e.target.value) || 0 })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-medium mb-1">Retail Price (cents)</label>
+                <input
+                  type="number"
+                  value={editingProduct.retail_price_cents}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, retail_price_cents: parseInt(e.target.value) || 0 })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-800 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setEditingProduct(null)}
+                className="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20"
+              >
+                Finish Edit & Save Changes
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingSku && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h2 className="text-base font-bold text-rose-400 flex items-center gap-2">
+                <span>⚠️</span> Confirm Delete Profile
+              </h2>
+              <button onClick={() => setDeletingSku(null)} className="text-slate-400 hover:text-white">
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300">
+              Are you sure you want to soft delete moulding profile <strong className="font-mono text-amber-300">{deletingSku}</strong>?
+            </p>
+
+            <div className="pt-2 flex justify-end gap-3">
+              <button
+                onClick={() => setDeletingSku(null)}
+                className="px-4 py-2 bg-slate-800 text-slate-300 text-xs rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-rose-600/20"
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CSV Bulk Import Modal with Diff Preview */}
       {showImportModal && (
@@ -343,7 +546,7 @@ export default function AdminProductsPage() {
                   type="number"
                   value={newProduct.wholesale_price_cents}
                   onChange={(e) => setNewProduct({ ...newProduct, wholesale_price_cents: parseInt(e.target.value) || 0 })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white font-mono"
                 />
               </div>
               <div>
@@ -352,7 +555,7 @@ export default function AdminProductsPage() {
                   type="number"
                   value={newProduct.retail_price_cents}
                   onChange={(e) => setNewProduct({ ...newProduct, retail_price_cents: parseInt(e.target.value) || 0 })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white font-mono"
                 />
               </div>
             </div>

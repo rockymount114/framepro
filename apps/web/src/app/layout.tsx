@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   keywords: "picture frame mouldings, PS moulding, AI room visualizer, wholesale framing, interior design AI, framing quotation"
 };
 
+import { ToastProvider } from "@/components/ui/Toast";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -18,11 +20,14 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-amber-500 selection:text-slate-950">
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <AIAssistantWidget />
-        <Footer />
+        <ToastProvider>
+          <Navbar />
+          <main className="flex-1">{children}</main>
+          <AIAssistantWidget />
+          <Footer />
+        </ToastProvider>
       </body>
     </html>
   );
 }
+
