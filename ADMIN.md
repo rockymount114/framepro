@@ -72,14 +72,15 @@ async def create_product(...): ...
 
 ### Routing
 ```
-apps/web/app/(admin)/admin/
-  layout.tsx          # admin-only layout: sidebar nav, role-aware menu
-  page.tsx             # dashboard landing (key metrics summary)
+apps/web/src/app/admin/
+  layout.tsx          # admin-only layout: sidebar nav, role-aware menu, auth session check
+  login/              # admin login portal (/admin/login)
+  page.tsx            # dashboard landing (key metrics summary)
+  users/              # user & staff RBAC management UI (/admin/users)
   products/
   crm/
   analytics/
-  settings/
-    roles/             # permission management UI (Phase 6)
+  audit-log/
 ```
 
 ### Tech Choices (why, not just what)

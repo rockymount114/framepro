@@ -27,6 +27,42 @@ class UserRepository(BaseRepository):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def list_users(
+        self,
+        role: Optional[str] = None,
+        search: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0
+    ) -> List[User]:
+        stmt = select(User).where(User.deleted_at == None)
+        if role:
+            stmt = stmt.where(User.role == role)
+        if search:
+            pattern = f"%{search}%"
+            stmt = stmt.where((User.email.ilike(pattern)) | (User.full_name.ilike(pattern)))
+        stmt = stmt.order_by(User.created_at.desc()).offset(offset).limit(limit)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def update_user(self, user_id: str, **kwargs: Any) -> Optional[User]:
+        user = await self.get_by_id(user_id)
+        if not user:
+            return None
+        for k, v in kwargs.items():
+            if hasattr(user, k) and v is not None:
+                setattr(user, k, v)
+        await self.session.flush()
+        return user
+
+    async def soft_delete(self, user_id: str) -> bool:
+        from packages.database.models import utc_now
+        user = await self.get_by_id(user_id)
+        if not user:
+            return False
+        user.deleted_at = utc_now()
+        await self.session.flush()
+        return True
+
 class FrameProfileRepository(BaseRepository):
     async def create(self, **data: Any) -> FrameProfile:
         frame = FrameProfile(**data)

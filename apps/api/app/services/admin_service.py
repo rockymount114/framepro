@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from packages.database.models import (
     FrameProfile, FrameImage, Lead, ProductViewDaily, AdminAuditLog, Permission, RolePermission, User
 )
+from packages.database.repositories import UserRepository
 
 class AdminService:
     def __init__(self, session: AsyncSession):
@@ -312,3 +313,82 @@ class AdminService:
             "permissions": [{"id": p.id, "key": p.key, "description": p.description} for p in perms.scalars().all()],
             "role_permissions": [{"id": r.id, "role": r.role, "permission_id": r.permission_id} for r in roles.scalars().all()]
         }
+
+    # --- User & Staff Management (RBAC) ---
+    async def list_admin_users(
+        self,
+        role: Optional[str] = None,
+        search: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0
+    ) -> List[User]:
+        repo = UserRepository(self.session)
+        return await repo.list_users(role=role, search=search, limit=limit, offset=offset)
+
+    async def create_admin_user(self, actor_user_id: str, data: Dict[str, Any]) -> User:
+        email = data.get("email")
+        if not email:
+            raise ValueError("Email is required")
+        repo = UserRepository(self.session)
+        existing = await repo.get_by_email(email)
+        if existing:
+            raise ValueError(f"User with email '{email}' already exists")
+
+        user = await repo.create(
+            email=email,
+            full_name=data.get("full_name", "Staff Member"),
+            role=data.get("role", "staff")
+        )
+        await self.session.commit()
+
+        await self.log_action(
+            actor_user_id=actor_user_id,
+            action="user.created",
+            target_type="users",
+            target_id=user.id,
+            diff={"email": user.email, "role": user.role, "full_name": user.full_name}
+        )
+        return user
+
+    async def update_admin_user(self, actor_user_id: str, user_id: str, data: Dict[str, Any]) -> User:
+        repo = UserRepository(self.session)
+        user = await repo.get_by_id(user_id)
+        if not user:
+            raise ValueError(f"User with ID '{user_id}' not found")
+
+        diff = {}
+        for k, v in data.items():
+            if hasattr(user, k) and getattr(user, k) != v:
+                diff[k] = {"old": getattr(user, k), "new": v}
+                setattr(user, k, v)
+
+        await self.session.commit()
+        await self.log_action(
+            actor_user_id=actor_user_id,
+            action="user.updated",
+            target_type="users",
+            target_id=user.id,
+            diff=diff
+        )
+        return user
+
+    async def delete_admin_user(self, actor_user_id: str, user_id: str) -> bool:
+        repo = UserRepository(self.session)
+        user = await repo.get_by_id(user_id)
+        if not user:
+            return False
+
+        if user.id == actor_user_id:
+            raise ValueError("Cannot delete your own admin account")
+
+        await repo.soft_delete(user_id)
+        await self.session.commit()
+
+        await self.log_action(
+            actor_user_id=actor_user_id,
+            action="user.deleted",
+            target_type="users",
+            target_id=user_id,
+            diff={"email": user.email}
+        )
+        return True

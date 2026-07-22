@@ -46,6 +46,16 @@ class LeadUpdatePayload(BaseModel):
 class CSVCommitPayload(BaseModel):
     items: List[Dict[str, Any]]
 
+class UserCreatePayload(BaseModel):
+    email: str
+    full_name: str
+    role: str = "staff"
+    password: Optional[str] = None
+
+class UserUpdatePayload(BaseModel):
+    full_name: Optional[str] = None
+    role: Optional[str] = None
+
 # --- Product Management ---
 @router.get("/products", dependencies=[Depends(require_permission("products:read"))])
 async def list_admin_products(
@@ -233,3 +243,73 @@ async def get_audit_logs(
 async def get_permissions(session: AsyncSession = Depends(get_db)):
     srv = AdminService(session)
     return await srv.get_permissions()
+
+# --- User & Staff Management ---
+@router.get("/users", dependencies=[Depends(require_permission("users:read"))])
+async def list_admin_users(
+    role: Optional[str] = None,
+    search: Optional[str] = None,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    session: AsyncSession = Depends(get_db)
+):
+    srv = AdminService(session)
+    users = await srv.list_admin_users(role=role, search=search, limit=limit, offset=offset)
+    return {
+        "items": [
+            {
+                "id": u.id,
+                "email": u.email,
+                "full_name": u.full_name,
+                "role": u.role,
+                "created_at": u.created_at.isoformat() if u.created_at else None
+            }
+            for u in users
+        ]
+    }
+
+@router.post("/users", dependencies=[Depends(require_permission("users:write"))])
+async def create_admin_user(
+    payload: UserCreatePayload,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db)
+):
+    srv = AdminService(session)
+    try:
+        user = await srv.create_admin_user(actor_user_id=current_user.id, data=payload.model_dump())
+        return {"status": "success", "id": user.id, "email": user.email, "role": user.role}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail={"code": "BAD_REQUEST", "message": str(e)})
+
+@router.patch("/users/{user_id}", dependencies=[Depends(require_permission("users:write"))])
+async def update_admin_user(
+    user_id: str,
+    payload: UserUpdatePayload,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db)
+):
+    srv = AdminService(session)
+    try:
+        user = await srv.update_admin_user(
+            actor_user_id=current_user.id,
+            user_id=user_id,
+            data={k: v for k, v in payload.model_dump().items() if v is not None}
+        )
+        return {"status": "updated", "id": user.id, "role": user.role}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": str(e)})
+
+@router.delete("/users/{user_id}", dependencies=[Depends(require_permission("users:write"))])
+async def delete_admin_user(
+    user_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db)
+):
+    srv = AdminService(session)
+    try:
+        deleted = await srv.delete_admin_user(actor_user_id=current_user.id, user_id=user_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "User not found"})
+        return {"status": "deleted", "id": user_id}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail={"code": "BAD_REQUEST", "message": str(e)})

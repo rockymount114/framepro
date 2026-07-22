@@ -40,7 +40,14 @@ async def get_current_user(
                 await session.commit()
         return user
 
-    # 2. Default fallback demo user if unauthenticated or demo_token
+    # 2. Check JWT bearer token (jwt_{user_id})
+    if token and token.startswith("jwt_"):
+        user_id = token[4:]
+        user = await user_repo.get_by_id(user_id)
+        if user:
+            return user
+
+    # 3. Default fallback demo user if unauthenticated or demo_token
     user = await user_repo.get_by_email("demo@framepro.com")
     if not user:
         user = await user_repo.create(email="demo@framepro.com", full_name="Demo User", role="distributor")

@@ -176,6 +176,10 @@ AI endpoints are rate-limited per user and per IP to control cost (see `DEPLOYME
 | POST | `/admin/analytics/rollup` | `analytics:write` | Trigger daily view analytics rollup |
 | GET | `/admin/audit-logs` | `audit:read` | List admin audit logs |
 | GET | `/admin/permissions` | `roles:read` | List RBAC permissions and role mappings |
+| GET | `/admin/users` | `users:read` | List users/staff with role and search filters |
+| POST | `/admin/users` | `users:write` | Create a new user or staff member with role |
+| PATCH | `/admin/users/{user_id}` | `users:write` | Update user details or transition user role |
+| DELETE | `/admin/users/{user_id}` | `users:write` | Soft delete user account |
 
 ---
 

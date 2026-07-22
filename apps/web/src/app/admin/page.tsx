@@ -30,16 +30,16 @@ export default function AdminDashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           <Link
-            href="/admin/products"
+            href="/admin/users"
             className="px-4 py-2 rounded-xl text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950 transition shadow-lg shadow-amber-500/20 flex items-center gap-2"
           >
-            <span>➕</span> Add Product
+            <span>👥</span> Staff & Users
           </Link>
           <Link
-            href="/admin/crm"
-            className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+            href="/admin/products"
+            className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-2"
           >
-            Manage CRM Leads
+            <span>➕</span> Add Product
           </Link>
         </div>
       </div>

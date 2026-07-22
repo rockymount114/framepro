@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 interface NavItem {
   name: string;
@@ -13,15 +13,68 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { name: "Dashboard", href: "/admin", icon: "📊" },
+  { name: "Users & Staff", href: "/admin/users", icon: "👥", badge: "RBAC" },
   { name: "Products & Catalog", href: "/admin/products", icon: "🖼️", badge: "Bulk CSV" },
-  { name: "CRM & Leads", href: "/admin/crm", icon: "👥", badge: "Kanban" },
+  { name: "CRM & Leads", href: "/admin/crm", icon: "💼", badge: "Kanban" },
   { name: "View Analytics", href: "/admin/analytics", icon: "📈" },
   { name: "Audit Logs", href: "/admin/audit-log", icon: "🛡️" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+  const [user, setUser] = useState<{ email: string; role: string; full_name?: string } | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    if (pathname === "/admin/login") {
+      setAuthChecked(true);
+      return;
+    }
+
+    // Inspect authentication token
+    const token = localStorage.getItem("framepro_admin_token");
+    const storedUser = localStorage.getItem("framepro_admin_user");
+
+    if (!token) {
+      router.push("/admin/login");
+    } else {
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch {
+          setUser({ email: "admin@framepro.com", role: "admin" });
+        }
+      } else {
+        setUser({ email: "admin@framepro.com", role: "admin" });
+      }
+      setAuthChecked(true);
+    }
+  }, [pathname, router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("framepro_admin_token");
+    localStorage.removeItem("framepro_admin_user");
+    document.cookie = "framepro_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    router.push("/admin/login");
+  };
+
+  // If rendering the login page itself, don't show the admin shell layout
+  if (pathname === "/admin/login") {
+    return <>{children}</>;
+  }
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-400 flex items-center justify-center font-sans">
+        <div className="flex items-center gap-3">
+          <div className="w-4 h-4 rounded-full bg-amber-400 animate-ping" />
+          <span className="text-sm font-medium">Verifying admin session & permissions...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row font-sans border-t border-slate-800">
@@ -85,25 +138,36 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Admin Credentials & Session Footer */}
         <div className="p-4 border-t border-slate-800 bg-slate-950/40">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs text-amber-400 font-bold">
-              AD
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs text-amber-400 font-bold flex-shrink-0">
+                {user?.role === "admin" ? "AD" : "ST"}
+              </div>
+              {!collapsed && (
+                <div className="overflow-hidden text-left">
+                  <p className="text-xs font-semibold text-white truncate">{user?.full_name || "Admin Staff"}</p>
+                  <p className="text-[11px] text-slate-400 truncate">{user?.email || "admin@framepro.com"}</p>
+                </div>
+              )}
             </div>
             {!collapsed && (
-              <div className="overflow-hidden text-left">
-                <p className="text-xs font-semibold text-white truncate">Admin User</p>
-                <p className="text-[11px] text-slate-400 truncate">admin@framepro.com</p>
-              </div>
+              <button
+                onClick={handleLogout}
+                className="text-slate-400 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-800 transition"
+                title="Sign Out"
+              >
+                🚪
+              </button>
             )}
           </div>
           {!collapsed && (
             <div className="mt-3 pt-2 border-t border-slate-800/60 flex items-center justify-between text-[11px]">
               <span className="inline-flex items-center gap-1.5 text-emerald-400 font-mono">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                RBAC Active
+                Role: <span className="uppercase text-amber-300 font-bold">{user?.role || "admin"}</span>
               </span>
               <Link href="/catalog" className="text-slate-400 hover:text-amber-400 transition">
-                View Store ↗
+                Store ↗
               </Link>
             </div>
           )}
@@ -123,16 +187,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-400">
-              <span>🔑 API Key:</span>
-              <code className="text-amber-300 font-mono">framepro-admin-key-***</code>
-            </div>
-            <Link
-              href="/catalog"
-              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition"
+            <button
+              onClick={handleLogout}
+              className="text-xs bg-slate-800 hover:bg-red-500/20 hover:text-red-300 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1"
             >
-              Public Catalog
-            </Link>
+              <span>🚪</span> Sign Out
+            </button>
           </div>
         </header>
 

@@ -21,7 +21,10 @@ async def login(req: UserLoginRequest, session: AsyncSession = Depends(get_db)):
     user = await repo.get_by_email(req.email)
     if not user:
         # Auto-create for demo/testing convenience
-        user = await repo.create(email=req.email, full_name="Valued User", role="distributor")
+        is_admin = "admin" in req.email.lower()
+        role = "admin" if is_admin else "distributor"
+        full_name = "System Admin" if is_admin else "Valued User"
+        user = await repo.create(email=req.email, full_name=full_name, role=role)
     return TokenResponse(access_token=f"jwt_{user.id}", user_id=user.id, role=user.role)
 
 @router.get("/me", response_model=UserOut)
