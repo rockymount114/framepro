@@ -8,6 +8,11 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - { dockerfile: ./docker/Dockerfile.api, image: zjxteusa/framepro-api }
+          - { dockerfile: ./docker/Dockerfile.web, image: zjxteusa/framepro-web }
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,28 +29,15 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push api
+      - name: Build and push ${{ matrix.service.image }}
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./docker/Dockerfile.api
+          file: ${{ matrix.service.dockerfile }}
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            zjxteusa/framepro-api:latest
-            zjxteusa/framepro-api:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push web
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./docker/Dockerfile.web
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: |
-            zjxteusa/framepro-web:latest
-            zjxteusa/framepro-web:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            ${{ matrix.service.image }}:latest
+            ${{ matrix.service.image }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service.image }}
