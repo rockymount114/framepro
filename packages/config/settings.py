@@ -1,4 +1,9 @@
-from pydantic_settings import BaseSettings
+from pathlib import Path
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Root directory of the monorepo (3 levels up from packages/config/settings.py)
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+ENV_FILE = BASE_DIR / ".env"
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "FramePro API"
@@ -21,8 +26,11 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = "mock_gemini_key"
     OPENAI_API_KEY: str = "mock_openai_key"
 
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
+    model_config = SettingsConfigDict(
+        env_file=(str(ENV_FILE), ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
 
 settings = Settings()
+
