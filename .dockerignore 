@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+.github
+
+# Node / Frontend - MOST IMPORTANT FOR YOU
+node_modules
+**/node_modules
+apps/web/node_modules
+apps/web/.next
+apps/web/out
+apps/web/.turbo
+.next
+out
+dist
+build
+
+# Python
+__pycache__
+**/__pycache__
+*.pyc
+*.pyo
+.venv
+venv
+*.egg-info
+.pytest_cache
+.ruff_cache
+.mypy_cache
+
+# Env & secrets - don't bake secrets into image
+.env.local
+.env.development.local
+.env.production.local
+.env.*.local
+*.log
+npm-debug.log*
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Docker overrides
+docker-compose.override.yml

@@ -28,7 +28,8 @@ const mockAuditLogs: AuditLogItem[] = [
     action: "crm.lead_updated",
     target_type: "leads",
     target_id: "lead-1",
-    diff: { status: { old: "new", new: "contacted" }, follow_up_at: { old: None, new: "2026-07-25" } },
+    diff: { status: { old: "new", new: "contacted" }, follow_up_at: { old: null, new: "2026-07-25" } },
+
     created_at: "2026-07-22T07:45:00Z",
   },
   {

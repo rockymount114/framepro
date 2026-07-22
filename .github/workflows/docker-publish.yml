@@ -21,7 +21,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # API - FastAPI backend
       - name: Build and push api
         uses: docker/build-push-action@v6
         with:
@@ -34,7 +33,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # WEB - Next.js frontend
       - name: Build and push web
         uses: docker/build-push-action@v6
         with:

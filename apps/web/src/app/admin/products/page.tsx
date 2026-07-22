@@ -4,17 +4,18 @@ import React, { useState } from "react";
 import Link from "next/link";
 
 interface Product {
-  sku: str;
-  name: str;
-  material: str;
-  finish: str;
-  color: str;
+  sku: string;
+  name: string;
+  material: string;
+  finish: string;
+  color: string;
   width_mm: number;
   depth_mm: number;
   moq: number;
   retail_price_cents: number;
   wholesale_price_cents: number;
 }
+
 
 const initialProducts: Product[] = [
   { sku: "FP-GOLD-804", name: "Luxury Gold Baroque Frame Profile", material: "PS Composite", finish: "Foil Stamping", color: "Antique Gold", width_mm: 45, depth_mm: 25, moq: 100, retail_price_cents: 3500, wholesale_price_cents: 1800 },

@@ -60,6 +60,11 @@ To launch the complete platform (FastAPI backend, Next.js frontend, and Redis) w
 ```bash
 docker compose -f docker/docker-compose.yml up --build
 ```
+or build first
+```bash
+docker compose -f docker/docker-compose.yml build web --no-cache
+docker compose -f docker/docker-compose.yml up
+```
 
 - **Frontend Application**: `http://localhost:3000`
 - **FastAPI Backend**: `http://localhost:8000`

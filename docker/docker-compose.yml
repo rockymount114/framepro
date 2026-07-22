@@ -5,9 +5,8 @@ services:
       dockerfile: docker/Dockerfile.api
     ports:
       - "8000:8000"
-    environment:
-      - "DATABASE_URL=sqlite+aiosqlite:///:memory:"
-      - SECRET_KEY=production-secret-jwt-key
+    env_file:
+      - ../.env
     restart: unless-stopped
 
   web:
@@ -16,11 +15,14 @@ services:
       dockerfile: docker/Dockerfile.web
     ports:
       - "3000:3000"
+    env_file:
+      - ../.env
     environment:
-      - NEXT_PUBLIC_API_URL=http://api:8000
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
     restart: unless-stopped
     depends_on:
       - api
+
 
   redis:
     image: redis:7-alpine
