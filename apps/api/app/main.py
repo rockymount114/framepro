@@ -4,7 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from packages.config.settings import settings
 from packages.database.connection import init_db, AsyncSessionLocal
 from apps.api.app.services.product_service import ProductService
-from apps.api.app.routers import auth, products, ai, quotations, orders, distributor, crm, inventory
+from apps.api.app.routers import auth, products, ai, quotations, orders, distributor, crm, inventory, admin
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -43,6 +44,7 @@ app.include_router(orders.router, prefix=v1_prefix)
 app.include_router(distributor.router, prefix=v1_prefix)
 app.include_router(crm.router, prefix=v1_prefix)
 app.include_router(inventory.router, prefix=v1_prefix)
+app.include_router(admin.router, prefix=v1_prefix)
 
 @app.get("/health")
 async def health_check():

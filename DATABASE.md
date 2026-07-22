@@ -160,8 +160,35 @@ Tracks container-level logistics for production/shipment planning: `containers(i
 | source | text | e.g. "contact_form", "chatbot", "sample_request" |
 | status | enum(`new`,`contacted`,`qualified`,`won`,`lost`) | |
 | owner_user_id | uuid, nullable | sales rep assigned |
-| tags | text[] | |
+| tags | text[] / jsonb | |
 | email / phone / company | text | |
+| follow_up_at | timestamptz, nullable | scheduled follow-up date |
+
+### `permissions` & `role_permissions` (Admin RBAC)
+| Table | Columns | Notes |
+|---|---|---|
+| `permissions` | `id` (PK), `key` (unique text, e.g. `products:write`), `description` | Fine-grained permission definitions |
+| `role_permissions` | `id` (PK), `role` (text), `permission_id` (FK → permissions.id) | Maps user roles to permission keys |
+
+### `product_view_daily` (Product View Analytics Rollup)
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| frame_profile_id | uuid | FK → frame_profiles.id |
+| view_date | date | Rollup date |
+| view_count | integer | Daily view aggregate count |
+
+### `admin_audit_logs` (Admin Audit Log)
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid | PK |
+| actor_user_id | uuid | FK → users.id |
+| action | text | Action name e.g. `product.updated`, `crm.lead_status_changed` |
+| target_type | text | Entity target type |
+| target_id | uuid, nullable | Entity target ID |
+| diff | jsonb, nullable | Snapshot of changes |
+| created_at | timestamptz | Log timestamp |
+
 
 ---
 

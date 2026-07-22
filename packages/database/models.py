@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
 from sqlalchemy import (
-    String, Text, Integer, BigInteger, Numeric, DateTime, Boolean, ForeignKey, JSON
+    String, Text, Integer, BigInteger, Numeric, DateTime, Date, Boolean, ForeignKey, JSON
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -12,7 +12,42 @@ def utc_now() -> datetime:
 class Base(DeclarativeBase):
     pass
 
+class Permission(Base):
+    __tablename__ = "permissions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    key: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)  # e.g. "products:write", "crm:write"
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+class RolePermission(Base):
+    __tablename__ = "role_permissions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    role: Mapped[str] = mapped_column(String(50), index=True, nullable=False)  # matches users.role
+    permission_id: Mapped[str] = mapped_column(String(36), ForeignKey("permissions.id"), nullable=False, index=True)
+
+class ProductViewDaily(Base):
+    __tablename__ = "product_view_daily"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    frame_profile_id: Mapped[str] = mapped_column(String(36), ForeignKey("frame_profiles.id"), nullable=False, index=True)
+    view_date: Mapped[datetime.date] = mapped_column(Date, nullable=False, index=True)
+    view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+class AdminAuditLog(Base):
+    __tablename__ = "admin_audit_logs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    actor_user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    action: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g. "product.updated", "lead.status_changed"
+    target_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    diff: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
 class User(Base):
+
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -199,5 +234,7 @@ class Lead(Base):
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     company: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    follow_up_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+

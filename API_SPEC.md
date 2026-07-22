@@ -159,6 +159,27 @@ AI endpoints are rate-limited per user and per IP to control cost (see `DEPLOYME
 
 ---
 
+## Admin Panel (RBAC Restricted `/admin/*`)
+
+| Method | Path | Required Permission | Description |
+|---|---|---|---|
+| GET | `/admin/products` | `products:read` | List products with cost/wholesale pricing details |
+| POST | `/admin/products` | `products:write` | Create a frame profile |
+| PATCH | `/admin/products/{sku}` | `products:write` | Update product details |
+| DELETE | `/admin/products/{sku}` | `products:write` | Soft delete product profile |
+| POST | `/admin/products/import` | `products:write` | Bulk CSV import with diff preview |
+| GET | `/admin/products/export` | `products:read` | CSV export of product catalog |
+| GET | `/admin/crm/leads` | `crm:read` | List CRM leads with status & tag filters |
+| PATCH | `/admin/crm/leads/{id}` | `crm:write` | Update lead status, follow-up date, and tags |
+| GET | `/admin/analytics/products/top` | `analytics:read` | Aggregated top product views by date range |
+| GET | `/admin/analytics/products/{sku}/views` | `analytics:read` | Time-series view counts for a single product |
+| POST | `/admin/analytics/rollup` | `analytics:write` | Trigger daily view analytics rollup |
+| GET | `/admin/audit-logs` | `audit:read` | List admin audit logs |
+| GET | `/admin/permissions` | `roles:read` | List RBAC permissions and role mappings |
+
+---
+
+
 ## Webhooks (outbound)
 
 FramePro emits webhooks for integration with distributor/partner systems:
